@@ -69,7 +69,7 @@ def getA(corpus, posMap):
     A += 1
 
     return A/np.sum(A, axis=1)
-        
+
 
 def getB(corpus, obs, posMap):
     # The probability of each observation belonging to a state
