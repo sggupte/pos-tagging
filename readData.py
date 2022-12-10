@@ -1,5 +1,6 @@
 import nltk
 import pandas as pd
+import torch
 
 data = nltk.corpus.brown.tagged_sents(tagset='universal')
 
