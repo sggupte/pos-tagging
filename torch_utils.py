@@ -5,7 +5,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import gensim
 import gensim.downloader
-from gensim.models import KeyedVectors
+#from gensim.models import KeyedVectors
 from tqdm import tqdm
 from torch.nn.utils.rnn import pad_sequence
 
@@ -14,21 +14,23 @@ def get_df():
     data = nltk.corpus.brown.tagged_sents(tagset='universal')[:20000]
 
     dictionary = {"Word": [], "POS": []}
+    tag2idx = {"VERB":0, "NOUN":1, "PRON":2, "ADJ":3, "ADV":4, "ADP":5, "CONJ":6, \
+               "DET":7, "NUM":8, "PRT":9, "X":10, ".":11, "PAD":12}
     maxLength = 0
     for sentence in data:
            tempWordList = []
            tempPOSList = []
            for word in sentence:
                   tempWordList.append(word[0])
-                  tempPOSList.append(word[1])
+                  new_idx = tag2idx[word[1]]
+                  tempPOSList.append(new_idx)
            dictionary["Word"].append(tempWordList)
            dictionary["POS"].append(tempPOSList)
 
            if len(sentence) > maxLength:
-                  maxLength = len(sentence)
-
+               maxLength = len(sentence)
     df = pd.DataFrame(dictionary)
-    return df
+    return df, maxLength
     
 def get_splits(dataframe):
     # using a 80:10:10 train/val/test split
@@ -47,9 +49,6 @@ def word_embedder():
     #word2vec_vectors = KeyedVectors.load_word2vec_format(r"C:\Users\EricQ\gensim-data\word2vec-google-news-300\word2vec-google-news-300.gz",binary=False)
     return word2vec_vectors
 
-def maptag2label():
-    pass
-
 class POSDataset(Dataset):
     
     def __init__(self, df, w2v):
@@ -61,40 +60,50 @@ class POSDataset(Dataset):
     
     def __getitem__(self,index):
         
-        words = self.df.Word[index]
-        tags = self.df.POS[index]
+        words = self.df.iloc[index].Word
+        tags = self.df.iloc[index].POS
         embeddings = []
-        for word in tqdm(words):
+        for word in words:
             try:
                 temp = torch.tensor(self.w2v[word])
             except: 
                 temp = -1*torch.ones(300)
             
             embeddings.append(temp)
-        
+        tags = torch.tensor(tags)
         sentence_embedding = torch.vstack(embeddings)
         return sentence_embedding, tags
     
 def collate_function(batch):
-    batched = pad_sequence(batch,batch_first=True)
-    return batched
+    tag_pad_value = 12 #This is the tag value assigned to padding
+    sentences = []
+    tags = []
+    for sentence_embed, tag in batch:    
+        sentences.append(sentence_embed)
+        tags.append(tag)
+    batched_sent = pad_sequence(sentences,batch_first=True)
+    batched_tag = pad_sequence(tags, batch_first=True, padding_value = tag_pad_value)
+    
+    return batched_sent, batched_tag
     
 #%%
     
 if __name__ == "__main__":
-    df = get_df()
+    df, maxLength = get_df()
     word2vec = word_embedder()
     train, val, test = get_splits(df)
     #%%
     train_data = POSDataset(train, word2vec)
-    train_loader = DataLoader(train_data, batch_size=1, shuffle=True,num_workers=4,\
-                              collate_fn = collate_function, pin_memory=True)
+    val_data = POSDataset(val, word2vec)
+    test_data = POSDataset(test, word2vec)
+    train_loader = DataLoader(train_data, batch_size=64, shuffle=True, collate_fn = collate_function)
+    val_loader = DataLoader(val_data, batch_size=64, shuffle=True, collate_fn = collate_function)
+    test_loader = DataLoader(test_data, batch_size=1, shuffle=False)
+    # Will need to use unsqueeze for test_loader samples
     counter = 0
-    #print(len(train_loader))
-
-    
-    #print(df.head())
-    #train, val, test = get_splits(df)
-    #print(len(train))
-    #print(len(val))
-    #print(len(test))
+    for batched_sent, batched_tag in val_loader:
+        if counter == 5:
+            break
+        print(batched_sent.shape)
+        print(batched_tag.shape)
+        counter += 1
