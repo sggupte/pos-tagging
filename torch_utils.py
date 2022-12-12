@@ -6,7 +6,6 @@ from sklearn.model_selection import train_test_split
 import gensim
 import gensim.downloader
 #from gensim.models import KeyedVectors
-from tqdm import tqdm
 from torch.nn.utils.rnn import pad_sequence
 
 
@@ -67,7 +66,7 @@ class POSDataset(Dataset):
             try:
                 temp = torch.tensor(self.w2v[word])
             except: 
-                temp = -1*torch.ones(300)
+                temp = -1*torch.ones(300) # This is for out-of-vocabulary words
             
             embeddings.append(temp)
         tags = torch.tensor(tags)
