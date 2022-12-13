@@ -48,7 +48,7 @@ def train_Word2Vec(train_dataset:pd.DataFrame):
     data = train_dataset.Word
     model = Word2Vec(data,vector_size=300,min_count=1, seed=42)
     model.save("word2vec_brown.model")
-    return model
+    return model.wv
     
     
 if __name__ == "__main__":
