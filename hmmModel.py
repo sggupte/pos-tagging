@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import nltk
 import hmmlearn.hmm as hmm
 
@@ -15,9 +14,7 @@ def getDataFrame(corpus):
             tempPOSList.append(word[1])
         dictionary["Word"].append(tempWordList)
         dictionary["POS"].append(tempPOSList)
-
     df = pd.DataFrame(dictionary)
-
     return df
 
 def getDataFrame2(corpus):
@@ -27,9 +24,7 @@ def getDataFrame2(corpus):
             dictionary["Words"].append(word[0])
             dictionary["POS"].append(word[1])
             dictionary["Sentence"].append(f"Sentence: {i}")
-
     df = pd.DataFrame(dictionary)
-
     return df
 
 
@@ -60,7 +55,6 @@ def getWordObs(sentence, posMap):
     #   Example: [('The', 'DET'), ('Fulton', 'NOUN'), ('County', 'NOUN'), ('Grand', 'ADJ'), ('Jury', 'NOUN'), ('said', 'VERB')]
     # and output a list of integers
     obs = list()
-    i = 0
     for wordData in sentence:
         obs.append(wordData.lower())
     return obs
@@ -70,7 +64,6 @@ def getPi(corpus, posMap):
     pi = np.zeros(len(posMap))
     for sentence in corpus:
         pi[posMap[sentence[0][1]]] += 1
-    
     return pi/np.sum(pi)
 
 
@@ -80,7 +73,6 @@ def getA(corpus, posMap):
     A = np.zeros((n,n))
 
     # Find the probabilities of going from one state to another
-
     #   Initialize last and current states
     lastState = corpus[0][0][1]
     currentState = corpus[0][1][1]
@@ -128,19 +120,22 @@ class MyHMM():
         pi = getPi(corpus, POSMap)
         self.model.transmat_ = A
         self.model.startprob_ = pi
-    
+
+
     def loadB(self, sentObs):
         # Always call this before samples
         self.sentObs = sentObs
         B = getB(self.corpus, sentObs, self.POSMap)
         self.model.emissionprob_ = B
-    
+
+
     def sample(self, numSamples):
         if self.sentObs == None:
             raise Exception("Must call MyHmm.loadB() before Sampling") 
         X, state_sequence = self.model.sample(numSamples)
         return X, state_sequence
-    
+
+
     def getGeneratedSentence(self, X):
         sent = ""
         for row in X:
@@ -163,6 +158,13 @@ if __name__ == "__main__":
     np.random.seed(42)
     n_states = 12
     sentNum = 0
+
+    # Concatenate sentences together
+    trainingObservations = df_train.Word.iloc[0]
+    for i, sentList in enumerate(df_train.Word):
+        if i == 0:
+            continue
+        trainingObservations.extend(sentList)
 
     # Train the HMM Model on one sentence
     train_POSMap = getPOSMapping(train_corpus)
