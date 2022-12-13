@@ -130,11 +130,14 @@ class MyHMM():
         self.model.startprob_ = pi
     
     def loadB(self, sentObs):
+        # Always call this before samples
         self.sentObs = sentObs
         B = getB(self.corpus, sentObs, self.POSMap)
         self.model.emissionprob_ = B
     
     def sample(self, numSamples):
+        if self.sentObs == None:
+            raise Exception("Must call MyHmm.loadB() before Sampling") 
         X, state_sequence = self.model.sample(numSamples)
         return X, state_sequence
     
