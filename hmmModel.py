@@ -118,44 +118,56 @@ def getB(corpus, obs, posMap):
     return (B.T/np.sum(B, axis=1)).T
 
 
+class MyHMM():
+    def __init__(self, corpus, POSMap):
+        self.corpus = corpus
+        self.POSMap = POSMap
+        self.sentObs = None
+        self.model = hmm.MultinomialHMM(n_components=n_states, n_trials=1, algorithm="viterbi")
+        A = getA(corpus, POSMap)
+        pi = getPi(corpus, POSMap)
+        self.model.transmat_ = A
+        self.model.startprob_ = pi
+    
+    def loadB(self, sentObs):
+        self.sentObs = sentObs
+        B = getB(self.corpus, sentObs, self.POSMap)
+        self.model.emissionprob_ = B
+    
+    def sample(self, numSamples):
+        X, state_sequence = self.model.sample(numSamples)
+        return X, state_sequence
+    
+    def getGeneratedSentence(self, X):
+        sent = ""
+        for row in X:
+            sent += [self.sentObs[i] for i, item in enumerate(row) if item][0] + " "
+        return sent
+
+
 if __name__ == "__main__":
     # Load in the Data
     train_corpus = nltk.corpus.brown.tagged_sents(tagset='universal')[:1000]#[:16000]
-    #val_corpus = nltk.corpus.brown.tagged_sents(tagset='universal')[16000:18000]
-    #test_corpus = nltk.corpus.brown.tagged_sents(tagset='universal')[18000:20000]
+    val_corpus = nltk.corpus.brown.tagged_sents(tagset='universal')[16000:18000]
+    test_corpus = nltk.corpus.brown.tagged_sents(tagset='universal')[18000:20000]
 
     # Convert the Data to a DataFrame
     df_train = getDataFrame(train_corpus)
-    #df_val = getDataFrame(val_corpus)
-    #df_test = getDataFrame(test_corpus)
+    df_val = getDataFrame(val_corpus)
+    df_test = getDataFrame(test_corpus)
 
     # Set some things
     np.random.seed(42)
     n_states = 12
     sentNum = 0
 
-    print(df_train.head())
-
+    # Train the HMM Model on one sentence
     train_POSMap = getPOSMapping(train_corpus)
-    sentObs = getWordObs(df_train.Word.iloc[0], train_POSMap)
-    print(df_train.Word.iloc[0])
-    print(sentObs)
+    sentObs = getWordObs(df_train.Word.iloc[sentNum], train_POSMap)
 
-    # Fit the HMM
-    model = hmm.MultinomialHMM(n_components=n_states, n_trials=1)
-
-    A = getA(train_corpus, train_POSMap)
-    B = getB(train_corpus, sentObs, train_POSMap)
-    pi = getPi(train_corpus, train_POSMap)
-
-    model.transmat_ = A
-    model.startprob_ = pi
-    model.emissionprob_ = B
-
-    # X is a matrix that is n_rows=samples, n_columns=input sentences
-    X, state_sequence = model.sample(10)
-    for row in X:
-        print([sentObs[i] for i, item in enumerate(row) if item][0])
-    print(np.shape(X))
-    print(train_POSMap)
-    print(state_sequence)
+    # Take 20 Samples from the model
+    myHmm = MyHMM(train_corpus, train_POSMap)
+    myHmm.loadB(sentObs)
+    X, state_sequence = myHmm.sample(20)
+    sent = myHmm.getGeneratedSentence(X)
+    print(sent)
