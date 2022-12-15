@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import nltk
 import hmmlearn.hmm as hmm
+from time import time
+from tqdm import tqdm
 
 
 def getDataFrame(corpus):
@@ -14,16 +16,6 @@ def getDataFrame(corpus):
             tempPOSList.append(word[1])
         dictionary["Word"].append(tempWordList)
         dictionary["POS"].append(tempPOSList)
-    df = pd.DataFrame(dictionary)
-    return df
-
-def getDataFrame2(corpus):
-    dictionary = {"Sentence": [], "Words": [], "POS": []}
-    for i, sentence in enumerate(corpus):
-        for word in sentence:
-            dictionary["Words"].append(word[0])
-            dictionary["POS"].append(word[1])
-            dictionary["Sentence"].append(f"Sentence: {i}")
     df = pd.DataFrame(dictionary)
     return df
 
@@ -96,22 +88,25 @@ def getA(corpus, posMap):
 
 def getB(corpus, obs, posMap):
     # The probability of each observation belonging to a state
+    print(len(obs))
     B = np.zeros((len(posMap), len(obs)))
-    for i, o in enumerate(obs):
+    for i, o in tqdm(enumerate(obs)):
         # Search through the corpus to find all examples of it
         for sentence in corpus:
             for wordData in sentence:
                 if wordData[0].lower() == o.lower():
                     B[posMap[wordData[1]]][i] += 1
+        
+        if i == 500:
+            np.save("out/BMatrixx.npy", B)
     
     # Smoothing
     B += 1
 
     return (B.T/np.sum(B, axis=1)).T
 
-
 class MyHMM():
-    def __init__(self, corpus, POSMap):
+    def __init__(self, corpus, POSMap, n_states=12):
         self.corpus = corpus
         self.POSMap = POSMap
         self.sentObs = None
@@ -122,11 +117,20 @@ class MyHMM():
         self.model.startprob_ = pi
 
 
-    def loadB(self, sentObs):
-        # Always call this before samples
+    def loadBFromFile(self, filename, sentObs):
         self.sentObs = sentObs
-        B = getB(self.corpus, sentObs, self.POSMap)
+        B = np.load(f"out/{filename}")
         self.model.emissionprob_ = B
+
+
+    def loadB(self, sentObs, saveB=True):
+        # Always call this before samples
+        self.sentObs = list(set(sentObs)) # Only use unique words
+        print(len(self.sentObs))
+        B = getB(self.corpus, self.sentObs, self.POSMap)
+        self.model.emissionprob_ = B
+        if saveB:
+            np.save("out/BMatrix.npy", B)
 
 
     def sample(self, numSamples):
@@ -135,6 +139,24 @@ class MyHMM():
         X, state_sequence = self.model.sample(numSamples)
         return X, state_sequence
 
+
+    def generateCorpus(self, numSamples, minSize, maxSize, filename, saveToCSV=False):
+        numSamplesList = np.random.randint(minSize, maxSize, size=numSamples)
+        dictionary = {"Word": [], "POS": []}
+        for length in numSamplesList:
+            X, state_sequence = self.model.sample(length)
+            tempWordList = []
+            tempPOSList = []
+            for xRow, POSItem in zip(X, state_sequence):
+                tempWordList.append([self.sentObs[i] for i, item in enumerate(xRow) if item][0])
+                tempPOSList.append([i for i in self.POSMap if self.POSMap[i] == POSItem][0])
+                #list(self.POSMap.values()).index(POSItem))
+            dictionary["Word"].append(tempWordList)
+            dictionary["POS"].append(tempPOSList)
+        df = pd.DataFrame(dictionary)
+        if saveToCSV:
+            df.to_csv(f"out/{filename}", index=False)
+        return df
 
     def getGeneratedSentence(self, X):
         sent = ""
@@ -145,7 +167,7 @@ class MyHMM():
 
 if __name__ == "__main__":
     # Load in the Data
-    train_corpus = nltk.corpus.brown.tagged_sents(tagset='universal')[:1000]#[:16000]
+    train_corpus = nltk.corpus.brown.tagged_sents(tagset='universal')[:16000]
     val_corpus = nltk.corpus.brown.tagged_sents(tagset='universal')[16000:18000]
     test_corpus = nltk.corpus.brown.tagged_sents(tagset='universal')[18000:20000]
 
@@ -165,14 +187,24 @@ if __name__ == "__main__":
         if i == 0:
             continue
         trainingObservations.extend(sentList)
+        '''if i == 1:
+            break'''
 
     # Train the HMM Model on one sentence
     train_POSMap = getPOSMapping(train_corpus)
-    sentObs = getWordObs(df_train.Word.iloc[sentNum], train_POSMap)
+    sentObs = getWordObs(trainingObservations, train_POSMap)
 
     # Take 20 Samples from the model
+    start_time = time()
     myHmm = MyHMM(train_corpus, train_POSMap)
-    myHmm.loadB(sentObs)
-    X, state_sequence = myHmm.sample(20)
-    sent = myHmm.getGeneratedSentence(X)
-    print(sent)
+
+    # Get B from File
+    isBSaved = False
+    if isBSaved:
+        myHmm.loadBFromFile("BMatrix.npy", sentObs)
+    else:
+        myHmm.loadB(sentObs)
+
+    print(time() - start_time)
+
+    myHmm.generateCorpus(16000 , 6, 20, "myCSV.csv",  True)
