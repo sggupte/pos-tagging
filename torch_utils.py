@@ -33,12 +33,16 @@ def get_df():
     
 def get_splits(dataframe):
     # using a 80:10:10 train/val/test split
-    train, intermediate = train_test_split(dataframe, test_size=0.2)
-    val, test = train_test_split(intermediate, test_size=0.5)
+    #train, intermediate = train_test_split(dataframe, test_size=0.2)
+    #val, test = train_test_split(intermediate, test_size=0.5)
+    train = dataframe.iloc[:16000, :]
+    val = dataframe.iloc[16000:18000, :]
+    test = dataframe.iloc[18000:20000, :]
     
-    train.reset_index(drop=True)
-    val.reset_index(drop=True)
-    test.reset_index(drop=True)
+    
+    train = train.reset_index(drop=True)
+    val = val.reset_index(drop=True)
+    test = test.reset_index(drop=True)
     
     return train, val, test
     
@@ -106,3 +110,4 @@ if __name__ == "__main__":
         print(batched_sent.shape)
         print(batched_tag.shape)
         counter += 1
+    

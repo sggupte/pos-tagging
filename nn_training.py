@@ -5,6 +5,7 @@ import torch.optim as optim
 from torch_utils import *
 
 import numpy as np
+import matplotlib.pyplot as plt
 import random
 from tqdm import tqdm
 from architecture import BiLSTMTagger
@@ -43,6 +44,7 @@ def makeLoaders():
 
 # This will calculate accuracy for each batch, ignores the indices with pads
 def batchAccuracy(predictions, target, padding_index):
+    predictions = F.softmax(predictions, dim=-1)
     predictions_max = predictions.argmax(dim=1, keepdim=False)
     nonpadded_inputs = (target != padding_index).nonzero()
     correct = predictions_max[nonpadded_inputs]
@@ -103,6 +105,8 @@ def train_loop(epochs, trainloader, valloader, net, optimizer, criterion, device
     total_train_start = time.time()
     best_val_loss = np.inf
     net.to(device)
+    train_losses = []
+    eval_losses = []
     for epoch in range(epochs):
         print(f"Epoch {epoch+1}!")
         start_time = time.time()
@@ -119,6 +123,9 @@ def train_loop(epochs, trainloader, valloader, net, optimizer, criterion, device
         print(f"This is the evaluation loss for the Epoch: {eval_loss}")
         print(f"This is the averaged evaluation accuracy for the Epoch across batches: {eval_acc:.2f}%")
         print("\n\n")
+
+        train_losses.append(train_loss)
+        eval_losses.append(eval_loss)
         
         if eval_loss < best_val_loss:
             best_val_loss = eval_loss
@@ -126,6 +133,8 @@ def train_loop(epochs, trainloader, valloader, net, optimizer, criterion, device
     total_train_stop = time.time()
     print(f"The best evaluation Loss is: {best_val_loss}")
     print(f"The total time to train was: {(total_train_stop - total_train_start)/60} minutes")
+
+    return train_losses, eval_losses
     
 def test_loop(testloader, net, device):
     net.to(device)
@@ -137,6 +146,7 @@ def test_loop(testloader, net, device):
           target = target.squeeze().to(device)
     
           output = net(x)
+          output = F.softmax(output, dim=2)
           predictions = output.squeeze(0).argmax(dim=1, keepdim=False)
           accuracy = 100* ((target == predictions).sum() / predictions.size(0)).item()
           averaged_acc += accuracy
