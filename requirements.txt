@@ -7,3 +7,4 @@ pomegranate
 jupyter
 nltk
 hmmlearn
+gensim
