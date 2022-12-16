@@ -20,29 +20,28 @@ def getDataFrame(corpus):
     return df
 
 
-def getPOSMapping(corpus):
+def getPOSMapping():
     """ The indexies of values here will be the integers for observations
-
-    Args:
-        corpus (list): list of sentences with tuples containing the word and its POS
 
     Returns:
         list: returns a list of parts of speech
     """
-    temp = set()
-    for sentence in corpus:
-        for wordData in sentence:
-            temp.add(wordData[1])
-    
-    posMap = {}
-    i = 0
-    for val in temp:
-        posMap[val] = i
-        i += 1
+    posMap = {"NOUN":0,
+              "VERB":1,
+              "ADJ":2,
+              "ADV":3,
+              "PRON":4,
+              "DET":5,
+              "ADP":6,
+              "NUM":7,
+              "CONJ":8,
+              "PRT":9,
+              ".":10,
+              "X":11}
     return posMap
 
 
-def getWordObs(sentence, posMap):
+def getWordObs(sentence):
     # Take in a sentence from the corpus
     #   Example: [('The', 'DET'), ('Fulton', 'NOUN'), ('County', 'NOUN'), ('Grand', 'ADJ'), ('Jury', 'NOUN'), ('said', 'VERB')]
     # and output a list of integers
@@ -86,7 +85,7 @@ def getA(corpus, posMap):
     return (A.T/np.sum(A, axis=1)).T
 
 
-def getB(corpus, obs, posMap):
+def getB(corpus, obs, posMap, saveB):
     # The probability of each observation belonging to a state
     print(len(obs))
     B = np.zeros((len(posMap), len(obs)))
@@ -97,8 +96,8 @@ def getB(corpus, obs, posMap):
                 if wordData[0].lower() == o.lower():
                     B[posMap[wordData[1]]][i] += 1
         
-        if i == 500:
-            np.save("out/BMatrixx.npy", B)
+        if i == 500 and saveB:
+            np.save("out/BMatrix.npy", B)
     
     # Smoothing
     B += 1
@@ -127,7 +126,7 @@ class MyHMM():
         # Always call this before samples
         self.sentObs = list(set(sentObs)) # Only use unique words
         print(len(self.sentObs))
-        B = getB(self.corpus, self.sentObs, self.POSMap)
+        B = getB(self.corpus, self.sentObs, self.POSMap, saveB)
         self.model.emissionprob_ = B
         if saveB:
             np.save("out/BMatrix.npy", B)
@@ -187,12 +186,11 @@ if __name__ == "__main__":
         if i == 0:
             continue
         trainingObservations.extend(sentList)
-        '''if i == 1:
-            break'''
 
     # Train the HMM Model on one sentence
-    train_POSMap = getPOSMapping(train_corpus)
-    sentObs = getWordObs(trainingObservations, train_POSMap)
+    train_POSMap = getPOSMapping()
+    print(train_POSMap)
+    sentObs = getWordObs(trainingObservations)
 
     # Take 20 Samples from the model
     start_time = time()
@@ -207,4 +205,4 @@ if __name__ == "__main__":
 
     print(time() - start_time)
 
-    myHmm.generateCorpus(16000 , 6, 20, "myCSV.csv",  True)
+    myHmm.generateCorpus(20000 , 6, 20, "generatedCorpus.csv",  True)
