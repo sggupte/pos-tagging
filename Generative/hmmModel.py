@@ -6,6 +6,15 @@ from time import time
 from tqdm import tqdm
 
 
+def getObsStates(sentence, posMap):
+    # Take in a sentence from the corpus
+    # and output a list of integers
+    obsStates = list()
+    for wordData in sentence:
+        obsStates.append(posMap[wordData])
+    return obsStates
+
+
 def getDataFrame(corpus):
     dictionary = {"Word": [], "POS": []}
     for sentence in corpus:
@@ -99,9 +108,9 @@ class MyHMM():
 
     def getB(self, corpus, obs, posMap, saveB):
         # The probability of each observation belonging to a state
-        print(len(obs))
         B = np.zeros((len(posMap), len(obs)))
-        for i, o in tqdm(enumerate(obs)):
+        for i, o in enumerate(obs):
+        #for i, o in tqdm(enumerate(obs)):
             # Search through the corpus to find all examples of it
             for sentence in corpus:
                 for wordData in sentence:
@@ -126,7 +135,6 @@ class MyHMM():
     def loadB(self, sentObs, saveB=True):
         # Always call this before samples
         self.sentObs = list(set(sentObs)) # Only use unique words
-        print(len(self.sentObs))
         B = self.getB(self.corpus, self.sentObs, self.POSMap, saveB)
         self.model.emissionprob_ = B
         if saveB:

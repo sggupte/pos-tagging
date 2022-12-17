@@ -8,7 +8,7 @@ from hmmModel import getDataFrame, getPOSMapping, getWordObs, MyHMM
 
 if __name__ == "__main__":
     # Load in the Data
-    train_corpus = nltk.corpus.brown.tagged_sents(tagset='universal')[:10]#[:16000]
+    train_corpus = nltk.corpus.brown.tagged_sents(tagset='universal')[:16000]
     val_corpus = nltk.corpus.brown.tagged_sents(tagset='universal')[16000:18000]
     test_corpus = nltk.corpus.brown.tagged_sents(tagset='universal')[18000:20000]
 
@@ -31,7 +31,6 @@ if __name__ == "__main__":
 
     # Train the HMM Model on one sentence
     train_POSMap = getPOSMapping()
-    print(train_POSMap)
     sentObs = getWordObs(trainingObservations)
 
     # Take 20 Samples from the model
