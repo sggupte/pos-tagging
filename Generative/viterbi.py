@@ -32,7 +32,7 @@ def dfToCorpusStyle(words, pos):
         retList.append(tempList)
     return retList
 
-train_corpus = nltk.corpus.brown.tagged_sents(tagset='universal')[:10]#[:16000]
+train_corpus = nltk.corpus.brown.tagged_sents(tagset='universal')[:16000]
 test_corpus = nltk.corpus.brown.tagged_sents(tagset='universal')[18000:20000]
 
 # Convert the Data to a DataFrame
@@ -62,11 +62,13 @@ for sentence, pos in tqdm(zip(df_test.Word, df_test.POS)):
         confusionMatrix[truth][predicted] += 1
     totalNumWords += len(obs)
 
-confusionMatrix /= np.sum(confusionMatrix+1e-19, axis=0)
+confusionMatrix = (confusionMatrix / np.sum(confusionMatrix+1e-19, axis=0)).T
 
 print(f"Total Time for Real Data: {time() - start_time}")
 print(totalCorrect/totalNumWords)
 print(confusionMatrix)
+
+plt.figure()
 sn.heatmap(confusionMatrix, annot=True, annot_kws={"size":6}) # font size
 plt.xlabel("Predicted")
 plt.ylabel("True Label")
@@ -102,6 +104,7 @@ print(f"Total Time for Synthetic Data: {time() - start_time}")
 print(totalCorrect/totalNumWords)
 print(confusionMatrix)
 
+plt.figure()
 sn.heatmap(confusionMatrix, annot=True, annot_kws={"size":6}) # font size
 plt.xlabel("Predicted")
 plt.ylabel("True Label")
