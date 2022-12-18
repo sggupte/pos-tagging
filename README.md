@@ -13,7 +13,7 @@ All the code used to produce the results for the generative model are under the 
 
 * hmmModel.py -- main HMM model that is referenced in both textGenerator and Viterbi
 * textGenerator.py -- Generates synthetic corpus and saves it in the out folder
-* viterbi.py -- Runs the viterbi algorithm and saves it in the out folder
+* viterbi.py -- Runs the viterbi algorithm and saves the confusion matrices in the out folder
 
 ## Discriminative Model
 All code used to produce the results for the discriminative neural network are under the Discriminative folder.
